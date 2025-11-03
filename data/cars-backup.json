@@ -1,0 +1,26 @@
+[
+    {
+        "_id": "c101",
+        "vendor": "subali",
+        "price": 8262,
+        "speed": 160
+    },
+    {
+        "_id": "c102",
+        "vendor": "mitsu",
+        "price": 1235,
+        "speed": 120
+    },
+    {
+        "_id": "c103",
+        "vendor": "toyoyo",
+        "price": 5236,
+        "speed": 100
+    },
+    {
+        "_id": "c104",
+        "vendor": "posh",
+        "price": 9172,
+        "speed": 300
+    }
+]
