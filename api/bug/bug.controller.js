@@ -40,7 +40,7 @@ export async function getBugById(req, res) {
    try {
       res.send(await bugService.getById(bugId));
    } catch (err) {
-      loggerService.error('Cannot get car', err);
+      loggerService.error('Cannot get bug', err);
       res.status(404).send('Cannot get bug');
    }
 }

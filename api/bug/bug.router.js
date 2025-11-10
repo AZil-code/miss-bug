@@ -1,5 +1,4 @@
 import express from 'express';
-// import { getBugs } from './bug.controller.js';
 import { createBug, getBugById, getBugs, removeBug, updateBug } from './bug.controller.js';
 
 const router = express.Router();
