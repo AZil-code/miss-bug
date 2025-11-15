@@ -3,7 +3,7 @@ import { makeId, readJsonFile, writeJsonFile } from '../../services/utils.js';
 
 export const userService = {
    query,
-   getById,
+   getByUsername,
    remove,
    save,
 };
@@ -50,14 +50,13 @@ async function query(filterBy = {}, sortBy = {}) {
    }
 }
 
-async function getById(userId) {
+async function getByUsername(username) {
    try {
-      const user = users.find((user) => user._id === userId);
+      const user = users.find((user) => user.username === username);
       if (!user) throw new Error('Cannot find user');
       return user;
    } catch (err) {
       loggerService.error(err);
-      throw err;
    }
 }
 
@@ -75,6 +74,7 @@ async function remove(userId) {
 }
 
 async function save(userToSave) {
+   console.log('save');
    try {
       let logTxt;
       if (userToSave._id) {
@@ -91,7 +91,7 @@ async function save(userToSave) {
       loggerService.debug(`User ${logTxt} - `, userToSave);
       return userToSave;
    } catch (err) {
-      loggerService.error(err);
+      loggerService.error('Failed to save user: ', err);
       throw err;
    }
 }

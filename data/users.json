@@ -5,5 +5,11 @@
         "username": "bibs",
         "password": "bibs234",
         "_id": "IN24fZ"
+    },
+    {
+        "username": "monkey",
+        "password": "$2b$10$O8p5IioYFzh1r/OqeqlkPO9x7rgNVi6YvLMqQpYc6jJL96YHXprGi",
+        "fullname": "chimpanzini bananini",
+        "_id": "yHjtkE"
     }
 ]

@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import { loggerService } from './services/logger.service.js';
 import { bugRoutes } from './api/bug/bug.router.js';
 import { userRoutes } from './api/user/user.router.js';
+import { authRoutes } from './api/auth/auth.routes.js';
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use(cookieParser());
 app.use(express.json());
 app.use('/api/bug', bugRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/auth', authRoutes);
 
 const port = 3030;
 app.listen(port, () => {
