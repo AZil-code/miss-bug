@@ -2,6 +2,7 @@ import { loggerService } from '../../services/logger.service.js';
 import { bugService } from './bug.service.js';
 
 export async function getBugs(req, res) {
+   console.log('getBugs');
    const { title, severity, description, pageIdx } = req.query;
    const filterBy = { title, severity: +severity, description };
    if (pageIdx) filterBy.pageIdx = +pageIdx;
@@ -11,12 +12,17 @@ export async function getBugs(req, res) {
 
 export async function createBug(req, res) {
    const { title, severity, description } = req.body;
-   console.log(req.body);
+   const loggedinUser = req.loggedinUser;
+
    res.send(
       await bugService.save({
          title: title,
          severity: severity,
          description,
+         creator: {
+            _id: loggedinUser._id,
+            fullname: loggedinUser.fullname,
+         },
          createadAt: Date.now(),
       })
    );

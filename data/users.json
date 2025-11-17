@@ -11,5 +11,11 @@
         "password": "$2b$10$O8p5IioYFzh1r/OqeqlkPO9x7rgNVi6YvLMqQpYc6jJL96YHXprGi",
         "fullname": "chimpanzini bananini",
         "_id": "yHjtkE"
+    },
+    {
+        "username": "use",
+        "password": "$2b$10$WUxm1Sj0mtaKmAD14NbkMOVkgBrWERKOTuUQk.y8hnwh2/7LAplvW",
+        "fullname": "use",
+        "_id": "5HeHIZ"
     }
 ]

@@ -12,6 +12,7 @@ const bugs = readJsonFile('./data/bugs.json');
 const PAGE_SIZE = 4;
 
 async function query(filterBy = {}, sortBy = {}) {
+   console.log('here');
    let bugsToDisplay = bugs;
    try {
       if (filterBy.title) {
@@ -65,6 +66,7 @@ async function remove(bugId) {
    try {
       const bugIdx = bugs.findIndex((bug) => bug._id === bugId);
       if (bugIdx < 0) throw new Error('Cannot find bug');
+      if (!loggedinUser.isAdmin && loggedinUser._id !== bugToSave._id) throw 'User does not own bug';
       bugs.splice(bugIdx, 1);
       await _saveBugsToFile();
       loggerService.debug('Delete bug success! ', bugId);
@@ -74,13 +76,17 @@ async function remove(bugId) {
    }
 }
 
-async function save(bugToSave) {
+async function save(bugToSave, loggedinUser) {
    try {
       let logTxt;
       if (bugToSave._id) {
          const bugIdx = bugs.findIndex((bug) => bug._id === bugToSave._id);
          if (bugIdx < 0) throw new Error('Cannot find bug');
-         bugs[bugIdx] = bugToSave;
+
+         if (!loggedinUser.isAdmin && loggedinUser._id !== bugToSave._id) throw 'User does not own bug';
+
+         const { title, description, severity } = bugToSave;
+         bugs[bugIdx] = { ...bugs[bugIdx], title, description, severity };
          logTxt = 'updated';
       } else {
          bugToSave._id = makeId();
