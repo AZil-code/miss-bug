@@ -29,15 +29,20 @@ export async function createBug(req, res) {
 }
 
 export async function updateBug(req, res) {
-   const { title, severity, description } = req.body;
+   const { title, severity, description, creator } = req.body;
    const { bugId } = req.params;
+   const loggedinUser = req.loggedinUser;
    res.send(
-      await bugService.save({
-         _id: bugId,
-         title: title,
-         severity: severity,
-         description,
-      })
+      await bugService.save(
+         {
+            _id: bugId,
+            title: title,
+            severity: severity,
+            description,
+            creator,
+         },
+         loggedinUser
+      )
    );
 }
 
@@ -52,5 +57,11 @@ export async function getBugById(req, res) {
 }
 
 export async function removeBug(req, res) {
-   await bugService.remove(req.params.bugId);
+   try {
+      await bugService.remove(req.params.bugId, req.loggedinUser);
+      res.send(200);
+   } catch (err) {
+      loggerService.error('Cannot delete bug', err);
+      res.status(400).send('Cannot delete bug');
+   }
 }

@@ -54,7 +54,7 @@ async function getByUsername(username) {
    try {
       const user = users.find((user) => user.username === username);
       if (!user) throw new Error('Cannot find user');
-      return { _id: user._id, username: user.username, fullname: user.fullname };
+      return { _id: user._id, username: user.username, fullname: user.fullname, isAdmin: user.isAdmin };
    } catch (err) {
       loggerService.error(err);
    }
@@ -74,7 +74,6 @@ async function remove(userId) {
 }
 
 async function save(userToSave) {
-   console.log('save');
    try {
       let logTxt;
       if (userToSave._id) {

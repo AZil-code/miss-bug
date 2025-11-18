@@ -62,28 +62,29 @@ async function getById(bugId) {
    }
 }
 
-async function remove(bugId) {
+async function remove(bugId, loggedinUser) {
    try {
       const bugIdx = bugs.findIndex((bug) => bug._id === bugId);
       if (bugIdx < 0) throw new Error('Cannot find bug');
-      if (!loggedinUser.isAdmin && loggedinUser._id !== bugToSave._id) throw 'User does not own bug';
+      if (!loggedinUser.isAdmin && loggedinUser._id !== bugs[bugIdx].creator._id) throw 'User does not own bug';
       bugs.splice(bugIdx, 1);
       await _saveBugsToFile();
       loggerService.debug('Delete bug success! ', bugId);
+      return;
    } catch (err) {
-      loggerService.error(err);
       throw err;
    }
 }
 
 async function save(bugToSave, loggedinUser) {
+   console.log(bugToSave);
    try {
       let logTxt;
       if (bugToSave._id) {
          const bugIdx = bugs.findIndex((bug) => bug._id === bugToSave._id);
          if (bugIdx < 0) throw new Error('Cannot find bug');
 
-         if (!loggedinUser.isAdmin && loggedinUser._id !== bugToSave._id) throw 'User does not own bug';
+         if (!loggedinUser.isAdmin && loggedinUser._id !== bugToSave.creator._id) throw 'User does not own bug';
 
          const { title, description, severity } = bugToSave;
          bugs[bugIdx] = { ...bugs[bugIdx], title, description, severity };
