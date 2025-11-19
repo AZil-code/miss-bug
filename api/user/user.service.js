@@ -60,10 +60,11 @@ async function getByUsername(username) {
    }
 }
 
-async function remove(userId) {
+async function remove(userId, loggedinUser) {
    try {
       const userIdx = users.findIndex((user) => user._id === userId);
-      if (userIdx < 0) throw new Error('Cannot find user');
+      if (userIdx < 0) throw new Error('Cannot remove user');
+      if (!loggedinUser.isAdmin) throw new Error('Cannot remove user');
       users.splice(userIdx, 1);
       await _saveUsersToFile();
       loggerService.debug('Delete user success! ', userId);
@@ -73,12 +74,13 @@ async function remove(userId) {
    }
 }
 
-async function save(userToSave) {
+async function save(userToSave, loggedinUser) {
    try {
       let logTxt;
       if (userToSave._id) {
          const userIdx = users.findIndex((user) => user._id === userToSave._id);
-         if (userIdx < 0) throw new Error('Cannot find user');
+         if (userIdx < 0) throw new Error('Cannot save user');
+         if (!loggedinUser.isAdmin && userToSave._id !== loggedinUser._id) throw new Error('Cannot save user');
          users[userIdx] = userToSave;
          logTxt = 'updated';
       } else {
