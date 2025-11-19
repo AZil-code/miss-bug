@@ -12,9 +12,11 @@ const bugs = readJsonFile('./data/bugs.json');
 const PAGE_SIZE = 4;
 
 async function query(filterBy = {}, sortBy = {}) {
-   console.log('here');
    let bugsToDisplay = bugs;
    try {
+      if (filterBy.creatorId) {
+         bugsToDisplay = bugsToDisplay.filter((bug) => bug.creator._id === filterBy.creatorId);
+      }
       if (filterBy.title) {
          const regExp = new RegExp(filterBy.title, 'i');
          bugsToDisplay = bugsToDisplay.filter((bug) => regExp.test(bug.title));
