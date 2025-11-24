@@ -1,3 +1,5 @@
+import { ObjectId } from 'mongodb';
+import { dbService } from '../../services/db.service.js';
 import { loggerService } from '../../services/logger.service.js';
 import { makeId, readJsonFile, writeJsonFile } from '../../services/utils.js';
 
@@ -10,38 +12,26 @@ export const userService = {
 
 const users = readJsonFile('./data/users.json');
 const PAGE_SIZE = 4;
+const DB_NAME = 'user';
 
 async function query(filterBy = {}, sortBy = {}) {
-   let usersToDisplay = users;
+   const where = {};
    try {
       if (filterBy.fullname) {
          const regExp = new RegExp(filterBy.fullname, 'i');
-         usersToDisplay = usersToDisplay.filter((user) => regExp.test(user.fullname));
+         where.fullname = { $regex: filterBy.fullname };
       }
       if (filterBy.username) {
          const regExp = new RegExp(filterBy.username, 'i');
-         usersToDisplay = usersToDisplay.filter((user) => regExp.test(user.username));
+         where.username = { $regex: filterBy.username };
       }
-      if (filterBy.score != null && filterBy.score >= 0) {
-         usersToDisplay = usersToDisplay.filter((user) => user.score >= filterBy.score);
-      }
-
-      if (sortBy.sortBy && usersToDisplay.length > 1) {
-         const { sortBy: sortField, sortDir } = sortBy;
-         switch (typeof usersToDisplay[0][sortField]) {
-            case 'string':
-               usersToDisplay.sort((a, b) => sortDir * a[sortField].localeCompare(b[sortField]));
-               break;
-            case 'number':
-               usersToDisplay.sort((a, b) => sortDir * (a[sortField] - b[sortField]));
-               break;
-         }
-      }
-
-      if ('pageIdx' in filterBy) {
-         const startIdx = filterBy.pageIdx * PAGE_SIZE;
-         usersToDisplay = usersToDisplay.slice(startIdx, startIdx + PAGE_SIZE);
-      }
+      const collection = await dbService.getCollection(DB_NAME);
+      const { sortBy: sortField, sortDir } = sortBy;
+      return await collection
+         .find(where)
+         .sort({ [sortField]: sortDir })
+         .skip(PAGE_SIZE * filterBy.pageIdx)
+         .toArray();
 
       return usersToDisplay;
    } catch (err) {
@@ -52,21 +42,21 @@ async function query(filterBy = {}, sortBy = {}) {
 
 async function getByUsername(username) {
    try {
-      const user = users.find((user) => user.username === username);
+      const collection = await dbService.getCollection(DB_NAME);
+      const user = await collection.findOne({ username: username });
       if (!user) throw new Error('Cannot find user');
       return { _id: user._id, username: user.username, fullname: user.fullname, isAdmin: user.isAdmin };
    } catch (err) {
       loggerService.error(err);
+      throw err;
    }
 }
 
 async function remove(userId, loggedinUser) {
    try {
-      const userIdx = users.findIndex((user) => user._id === userId);
-      if (userIdx < 0) throw new Error('Cannot remove user');
+      const collection = await dbService.getCollection(DB_NAME);
       if (!loggedinUser.isAdmin) throw new Error('Cannot remove user');
-      users.splice(userIdx, 1);
-      await _saveUsersToFile();
+      await collection.deleteOne({ _id: ObjectId.createFromHexString(userId) });
       loggerService.debug('Delete user success! ', userId);
    } catch (err) {
       loggerService.error(err);
@@ -75,22 +65,20 @@ async function remove(userId, loggedinUser) {
 }
 
 async function save(userToSave, loggedinUser) {
+   let newUser;
    try {
+      const collection = await dbService.getCollection(DB_NAME);
       let logTxt;
       if (userToSave._id) {
-         const userIdx = users.findIndex((user) => user._id === userToSave._id);
-         if (userIdx < 0) throw new Error('Cannot save user');
          if (!loggedinUser.isAdmin && userToSave._id !== loggedinUser._id) throw new Error('Cannot save user');
-         users[userIdx] = userToSave;
+         newUser = await collection.updateOne({ _id: ObjectId.cacheHexString(userToSave._id) }, { $set: userToSave });
          logTxt = 'updated';
       } else {
-         userToSave._id = makeId();
-         users.push(userToSave);
+         newUser = await collection.insertOne(userToSave);
          logTxt = 'created';
       }
-      await _saveUsersToFile();
       loggerService.debug(`User ${logTxt} - `, userToSave);
-      return userToSave;
+      return newUser;
    } catch (err) {
       loggerService.error('Failed to save user: ', err);
       throw err;

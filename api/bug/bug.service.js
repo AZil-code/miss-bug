@@ -1,3 +1,5 @@
+import { ObjectId } from 'mongodb';
+import { dbService } from '../../services/db.service.js';
 import { loggerService } from '../../services/logger.service.js';
 import { makeId, readJsonFile, writeJsonFile } from '../../services/utils.js';
 
@@ -8,45 +10,35 @@ export const bugService = {
    save,
 };
 
+const DB_NAME = 'bug';
 const bugs = readJsonFile('./data/bugs.json');
 const PAGE_SIZE = 4;
 
 async function query(filterBy = {}, sortBy = {}) {
-   let bugsToDisplay = bugs;
+   const where = {};
+   if (filterBy.creatorId) {
+      where['creator._id'] = filterBy.creatorId;
+   }
+   if (filterBy.title) {
+      const regExp = new RegExp(filterBy.title, 'i');
+      where.title = { $regex: filterBy.title };
+   }
+
+   if (filterBy.severity != null && filterBy.severity >= 0) {
+      where.severity = { $gte: filterBy.severity };
+   }
+
+   const { sortBy: sortField, sortDir } = sortBy;
+
    try {
-      if (filterBy.creatorId) {
-         bugsToDisplay = bugsToDisplay.filter((bug) => bug.creator._id === filterBy.creatorId);
-      }
-      if (filterBy.title) {
-         const regExp = new RegExp(filterBy.title, 'i');
-         bugsToDisplay = bugsToDisplay.filter((bug) => regExp.test(bug.title));
-      }
-      if (filterBy.description) {
-         const regExp = new RegExp(filterBy.description, 'i');
-         bugsToDisplay = bugsToDisplay.filter((bug) => regExp.test(bug.description));
-      }
-      if (filterBy.severity != null && filterBy.severity >= 0) {
-         bugsToDisplay = bugsToDisplay.filter((bug) => bug.severity >= filterBy.severity);
-      }
-
-      if (sortBy.sortBy && bugsToDisplay.length > 1) {
-         const { sortBy: sortField, sortDir } = sortBy;
-         switch (typeof bugsToDisplay[0][sortField]) {
-            case 'string':
-               bugsToDisplay.sort((a, b) => sortDir * a[sortField].localeCompare(b[sortField]));
-               break;
-            case 'number':
-               bugsToDisplay.sort((a, b) => sortDir * (a[sortField] - b[sortField]));
-               break;
-         }
-      }
-
-      if ('pageIdx' in filterBy) {
-         const startIdx = filterBy.pageIdx * PAGE_SIZE;
-         bugsToDisplay = bugsToDisplay.slice(startIdx, startIdx + PAGE_SIZE);
-      }
-
-      return bugsToDisplay;
+      const collection = await dbService.getCollection(DB_NAME);
+      const bugs = await collection
+         .find(where)
+         .sort({ [sortField]: sortDir })
+         // .limit(PAGE_SIZE)
+         .skip(PAGE_SIZE * filterBy.pageIdx)
+         .toArray();
+      return bugs;
    } catch (err) {
       loggerService.error(err);
       throw err;
@@ -54,8 +46,10 @@ async function query(filterBy = {}, sortBy = {}) {
 }
 
 async function getById(bugId) {
+   console.log(bugId);
    try {
-      const bug = bugs.find((bug) => bug._id === bugId);
+      const collection = await dbService.getCollection(DB_NAME);
+      const bug = await collection.findOne({ _id: ObjectId.createFromHexString(bugId) });
       if (!bug) throw new Error('Cannot find bug');
       return bug;
    } catch (err) {
@@ -66,39 +60,40 @@ async function getById(bugId) {
 
 async function remove(bugId, loggedinUser) {
    try {
-      const bugIdx = bugs.findIndex((bug) => bug._id === bugId);
-      if (bugIdx < 0) throw new Error('Cannot find bug');
-      if (!loggedinUser.isAdmin && loggedinUser._id !== bugs[bugIdx].creator._id) throw 'User does not own bug';
-      bugs.splice(bugIdx, 1);
-      await _saveBugsToFile();
+      const collection = await dbService.getCollection(DB_NAME);
+      const bugIdObj = { _id: ObjectId.createFromHexString(bugId) };
+      const bug = await collection.findOne(bugIdObj);
+      if (!bug) throw new Error('Cannot find bug');
+      if (!loggedinUser.isAdmin && loggedinUser._id !== bug.creator._id) throw new Error('User does not own bug');
+      const res = await collection.deleteOne(bugIdObj);
       loggerService.debug('Delete bug success! ', bugId);
-      return;
+      return res;
    } catch (err) {
       throw err;
    }
 }
 
 async function save(bugToSave, loggedinUser) {
+   console.log(loggedinUser);
    console.log(bugToSave);
+   let newBug;
    try {
+      const collection = await dbService.getCollection(DB_NAME);
       let logTxt;
       if (bugToSave._id) {
-         const bugIdx = bugs.findIndex((bug) => bug._id === bugToSave._id);
-         if (bugIdx < 0) throw new Error('Cannot find bug');
-
          if (!loggedinUser.isAdmin && loggedinUser._id !== bugToSave.creator._id) throw 'User does not own bug';
-
          const { title, description, severity } = bugToSave;
-         bugs[bugIdx] = { ...bugs[bugIdx], title, description, severity };
+         newBug = await collection.updateOne(
+            { _id: ObjectId.createFromHexString(bugToSave._id) },
+            { $set: { title, description, severity } }
+         );
          logTxt = 'updated';
       } else {
-         bugToSave._id = makeId();
-         bugs.push(bugToSave);
+         newBug = await collection.insertOne(bugToSave);
          logTxt = 'created';
       }
-      await _saveBugsToFile();
       loggerService.debug(`Bug ${logTxt} - `, bugToSave);
-      return bugToSave;
+      return newBug;
    } catch (err) {
       loggerService.error(err);
       throw err;

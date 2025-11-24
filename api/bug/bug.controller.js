@@ -31,8 +31,8 @@ export async function updateBug(req, res) {
    const { title, severity, description, creator } = req.body;
    const { bugId } = req.params;
    const loggedinUser = req.loggedinUser;
-   res.send(
-      await bugService.save(
+   try {
+      const bug = await bugService.save(
          {
             _id: bugId,
             title: title,
@@ -41,8 +41,11 @@ export async function updateBug(req, res) {
             creator,
          },
          loggedinUser
-      )
-   );
+      );
+      res.send(bug);
+   } catch (err) {
+      res.status(404).send('Could not update bug!');
+   }
 }
 
 export async function getBugById(req, res) {
